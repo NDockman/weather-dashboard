@@ -1,7 +1,4 @@
 
-//my api key is e8b77a8a98c2ea61a93fac56cb1e968d
-// var requestURLy = "api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid={e8b77a8a98c2ea61a93fac56cb1e968d}"
-
 var currentCityCondition = document.querySelector("#current");
 var futureCityCondition = document.querySelector("#future");
 
@@ -16,18 +13,31 @@ const getWeather = async () => {
     cityHistory.push(city);
     saveArrayToLocal(cityHistory);
     
+    getWeatherApi(city);
+
+    generateHistory();
+};
+
+const getWeatherApi = async (city) => {
     // API calls for current and future weather conditions
     var url1 = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=imperial`;
     var url2 = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=imperial`;
 
     // Current Weather
     let currentData = await (await fetch(url1)).json();
-
     console.log(currentData)
+
+    let { dt, main:{temp}, weather:[{icon}], wind:{speed}, main:{humidity}} = currentData;
+
+    var iconurl = "http://openweathermap.org/img/w/" + icon + ".png";
+    
     currentCityCondition.innerHTML = `
         <div class="card">
-            <h4>${currentData.dt}</h4>
-            <h4>${currentData.main.temp}</h4>
+            <h4>${new Date(dt * 1000).toLocaleDateString()}</h4>
+            <h4>temp: ${temp}*F</h4>
+            <img src="${iconurl}" />
+            <h4>wind speed: ${speed} mph</h4>
+            <h4>humidity: ${humidity}%</h4>
         </div>
     `;
 
@@ -35,23 +45,26 @@ const getWeather = async () => {
     let {list} = await (await fetch(url2)).json();
     console.log({list})
 
+    futureCityCondition.innerHTML = "";
+
     for(let i = 0; i < list.length; i = i + 8) {
-        let { dt,  main:{temp}} = list[i];
+        let { dt, main:{temp}, weather:[{icon}], wind:{speed}, main:{humidity}} = list[i];
+
+        var iconurl = "http://openweathermap.org/img/w/" + icon + ".png";
 
         futureCityCondition.innerHTML += `
             <div class="card">
-                <h4>${dt}</h4>
-                <h4>${temp}</h4>
+                <h4>${new Date(dt * 1000).toLocaleDateString()}</h4>
+                <h4>temp: ${temp}*F</h4>
+                <img src="${iconurl}" />
+                <h4>wind speed: ${speed} mph</h4>
+                <h4>humidity: ${humidity}%</h4>
             </div>
         `;
     }
+}
 
-    //console.log(currentData, forecastData);
-
-    generateHistory();
-
-};
-
+// Appends a button in the search section for each city in history
 const generateHistory = () => {
     
     extractArrayFromLocal();
@@ -63,14 +76,14 @@ const generateHistory = () => {
         historyContainer.innerHTML = "";
     }
 
-    console.log(cityHistoryLocal)
-
     for(let x = 0; x < cityHistoryLocal.length; x++) {
         var historyButton = document.createElement("button");
-        historyButton.setAttribute("onclick", "getWeather()");
+        // historyButton.setAttribute("onclick", "getWeather()");
+        historyButton.addEventListener("click", function(event){
+            getWeatherApi(event.target.textContent)
+        })
         historyButton.textContent = cityHistoryLocal[x];
-
-        //historyContainer.innerHTML = historyButton;
+        historyContainer.appendChild(historyButton);
     }
 }
 
@@ -80,6 +93,5 @@ function saveArrayToLocal(array) {
 
 function extractArrayFromLocal() {
     cityHistoryLocal = JSON.parse(localStorage.getItem("city-history"));
-    console.log(cityHistoryLocal);
     return cityHistoryLocal
 }
